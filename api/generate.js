@@ -1,6 +1,14 @@
 import { GoogleGenAI } from "@google/genai";
 
 export default async function handler(req, res) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -8,22 +16,27 @@ export default async function handler(req, res) {
     try {
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) {
-            return res.status(500).json({ error: 'CRITICAL: GEMINI_API_KEY is missing in Vercel environment variables!' });
+            return res.status(200).json({ error: 'ОШИБКА: Не задан GEMINI_API_KEY в настройках Vercel!' });
         }
 
-        const { ingredients, lang } = req.body;
+        let body = req.body;
+        if (typeof body === 'string') {
+            try { body = JSON.parse(body); } catch (e) {}
+        }
+
+        const ingredients = body?.ingredients;
+        const lang = body?.lang || 'ru';
 
         if (!ingredients) {
-            return res.status(400).json({ error: 'Ingredients are required' });
+            return res.status(200).json({ error: 'Пожалуйста, введите ингредиенты!' });
         }
 
-        const isRussian = lang === 'ru';
-
-        const basePrompt = isRussian ? 
-            `Ты — эксперт-семейный шеф-повар и профессиональный диетолог. Создай вкусный, сбалансированный и полезный для детей рецепт блюда из этих ингредиентов: ${ingredients}. Формат ответа: Название, Время, Ингредиенты, Шаги, Советы шефа.` : 
-            `Act as an expert family chef and professional nutritionist. Create a toddler-safe recipe using: ${ingredients}. Format: Title, Time, Ingredients, Steps, Chef's Tips.`;
-
         const ai = new GoogleGenAI({ apiKey });
+
+        const isRussian = lang === 'ru';
+        const basePrompt = isRussian ? 
+            `Создай семейный рецепт блюда из этих ингредиентов: ${ingredients}. Формат: Название, Время, Ингредиенты, Шаги, Советы шефа.` : 
+            `Create a family recipe using: ${ingredients}. Format: Title, Time, Ingredients, Steps, Chef's Tips.`;
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
@@ -34,7 +47,7 @@ export default async function handler(req, res) {
 
         return res.status(200).json({ recipe: textOutput });
     } catch (error) {
-        console.error("Detailed server error:", error);
-        return res.status(500).json({ error: `SDK Error: ${error.message || error.toString()}` });
+        console.error("Catch error:", error);
+        return res.status(200).json({ error: `Ошибка бэкенда: ${error.message || error.toString()}` });
     }
 }
