@@ -136,7 +136,6 @@
         consoleEl.style.display = consoleEl.style.display === 'block' ? 'none' : 'block';
     }
 
-    // Перехват глобальных ошибок скрипта
     window.onerror = function(msg, url, line) {
         logDebug(`Global Error: ${msg} at line ${line}`, true);
         return false;
@@ -218,7 +217,7 @@
             }
 
             if (response.ok) {
-                resultDiv.textContent = data.recipe;
+                resultDiv.textContent = data.recipe || JSON.stringify(data, null, 2);
                 logDebug('Recipe generated successfully.');
             } else {
                 const errMsg = data.error || 'Failed to generate';
