@@ -20,21 +20,25 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.08); 
             position: relative;
         }
-        .lang-btn {
+        .top-buttons {
             position: absolute;
             top: 20px;
             right: 20px;
+            display: flex;
+            gap: 6px;
+        }
+        .top-btn {
             background: #e0e0e0;
             color: #333;
             border: none;
-            padding: 6px 12px;
+            padding: 6px 10px;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
         }
-        .lang-btn:active { background: #ccc; }
-        h2 { margin-top: 0; padding-right: 60px; font-size: 22px; color: #333; }
+        .top-btn:active { background: #ccc; }
+        h2 { margin-top: 0; padding-right: 110px; font-size: 22px; color: #333; }
         label { display: block; margin-top: 15px; font-weight: 600; color: #555; }
         textarea { 
             width: 100%; 
@@ -44,7 +48,7 @@
             border: 1px solid #ccc; 
             border-radius: 8px; 
             box-sizing: border-box; 
-            font-size: 16px; /* Предотвращает зум на iPhone */
+            font-size: 16px;
             font-family: inherit;
         }
         button.action-btn { 
@@ -71,12 +75,32 @@
             line-height: 1.5;
             color: #222;
         }
+        /* Стили для мини-консоли */
+        #debug-console {
+            display: none;
+            margin-top: 20px;
+            background: #1e1e1e;
+            color: #00ffcc;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            max-height: 250px;
+            overflow-y: auto;
+            text-align: left;
+        }
+        .log-entry { margin-bottom: 6px; border-bottom: 1px solid #333; padding-bottom: 4px; }
+        .log-error { color: #ff5555; }
+        .log-info { color: #55ffff; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <button class="lang-btn" id="langToggle" onclick="toggleLanguage()">RU</button>
+    <div class="top-buttons">
+        <button class="top-btn" id="langToggle" onclick="toggleLanguage()">RU</button>
+        <button class="top-btn" onclick="toggleDebug()">Logs</button>
+    </div>
     
     <h2 id="uiTitle">Family Recipe Generator</h2>
     
@@ -87,10 +111,36 @@
 
     <h3 id="uiResultTitle" style="font-size: 18px; margin-top: 20px;">Result:</h3>
     <div id="result">Your recipe will appear here...</div>
+
+    <!-- Консоль ошибок -->
+    <div id="debug-console">
+        <div class="log-info">[System] Debug console initialized.</div>
+    </div>
 </div>
 
 <script>
-    let currentLang = 'en'; // По умолчанию английский
+    let currentLang = 'en';
+
+    function logDebug(message, isError = false) {
+        const consoleEl = document.getElementById('debug-console');
+        const time = new Date().toLocaleTimeString();
+        const div = document.createElement('div');
+        div.className = 'log-entry ' + (isError ? 'log-error' : '');
+        div.textContent = `[${time}] ${message}`;
+        consoleEl.prepend(div);
+        console.log(message);
+    }
+
+    function toggleDebug() {
+        const consoleEl = document.getElementById('debug-console');
+        consoleEl.style.display = consoleEl.style.display === 'block' ? 'none' : 'block';
+    }
+
+    // Перехват глобальных ошибок скрипта
+    window.onerror = function(msg, url, line) {
+        logDebug(`Global Error: ${msg} at line ${line}`, true);
+        return false;
+    };
 
     const translations = {
         en: {
@@ -147,24 +197,38 @@
         }
 
         resultDiv.textContent = t.loading;
+        logDebug(`Sending request with ingredients: "${ingredients}", lang: ${currentLang}`);
 
         try {
             const response = await fetch('/api/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ingredients, lang: currentLang }) // Передаем язык на сервер
+                body: JSON.stringify({ ingredients, lang: currentLang })
             });
 
-            const data = await response.json();
+            logDebug(`Response status: ${response.status} ${response.statusText}`);
+
+            let data;
+            const textResponse = await response.text();
+            try {
+                data = JSON.parse(textResponse);
+            } catch (e) {
+                logDebug(`Failed to parse JSON response: ${textResponse.slice(0, 100)}`, true);
+                throw new Error('Server returned non-JSON response (status ' + response.status + ')');
+            }
 
             if (response.ok) {
                 resultDiv.textContent = data.recipe;
+                logDebug('Recipe generated successfully.');
             } else {
-                resultDiv.textContent = t.errorPrefix + (data.error || 'Failed to generate');
+                const errMsg = data.error || 'Failed to generate';
+                resultDiv.textContent = t.errorPrefix + errMsg;
+                logDebug(`Server API error: ${errMsg}`, true);
             }
         } catch (error) {
             console.error(error);
             resultDiv.textContent = t.serverError;
+            logDebug(`Fetch exception: ${error.message}`, true);
         }
     }
 </script>
