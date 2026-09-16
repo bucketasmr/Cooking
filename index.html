@@ -19,7 +19,7 @@
 
         [data-theme="light"] {
             --bg-color: #f4f7f6;
-            --card-bg: #white;
+            --card-bg: #ffffff;
             --text-color: #222222;
             --label-color: #555555;
             --border-color: #eeeeee;
@@ -38,7 +38,6 @@
             --input-bg: #fffdf9;
             --result-bg: #f4eee6;
             --top-btn-bg: #e2d8cc;
-            --text-color: #4a3b32;
             --top-btn-color: #4a3b32;
         }
 
@@ -164,8 +163,8 @@
 
 <div class="card">
     <div class="top-buttons">
-        <button class="top-btn" id="themeToggle" onclick="toggleTheme()" title="Сменить тему">🌙 Темная</button>
-        <button class="top-btn" id="langToggle" onclick="toggleLanguage()">RU</button>
+        <button class="top-btn" id="themeToggle" onclick="toggleTheme()" title="Change theme">🌙 Dark</button>
+        <button class="top-btn" id="langToggle" onclick="toggleLanguage()">ENG</button>
         <button class="top-btn" onclick="toggleDebug()">Logs</button>
     </div>
     
@@ -244,7 +243,8 @@
             errorPrefix: "Error: ",
             serverError: "Connection error with server.",
             copy: "Copy",
-            copied: "Copied!"
+            copied: "Copied!",
+            langBtn: "ENG"
         },
         ru: {
             title: "Генератор семейных рецептов",
@@ -258,16 +258,17 @@
             errorPrefix: "Ошибка: ",
             serverError: "Ошибка соединения с сервером.",
             copy: "Копировать",
-            copied: "Скопировано!"
+            copied: "Скопировано!",
+            langBtn: "RU"
         }
     };
 
     function toggleLanguage() {
         currentLang = currentLang === 'en' ? 'ru' : 'en';
-        document.getElementById('langToggle').textContent = currentLang === 'en' ? 'RU' : 'EN';
+        const t = translations[currentLang];
+        document.getElementById('langToggle').textContent = t.langBtn;
         updateThemeButton();
         
-        const t = translations[currentLang];
         document.getElementById('uiTitle').textContent = t.title;
         document.getElementById('uiLabel').textContent = t.label;
         document.getElementById('ingredients').placeholder = t.placeholder;
@@ -279,8 +280,9 @@
             copyBtn.textContent = t.copy;
         }
 
+        const prevLangDefault = currentLang === 'en' ? translations.ru.defaultResult : translations.en.defaultResult;
         const resultDiv = document.getElementById('result');
-        if (resultDiv.textContent === translations[currentLang === 'en' ? 'ru' : 'en'].defaultResult) {
+        if (resultDiv.textContent === prevLangDefault || resultDiv.textContent === 'Your recipe will appear here...' || resultDiv.textContent === 'Здесь появится ваш рецепт...') {
             resultDiv.textContent = t.defaultResult;
         }
     }
