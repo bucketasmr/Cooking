@@ -78,7 +78,21 @@
         }
         .top-btn:active { opacity: 0.8; }
         h2 { margin-top: 0; padding-right: 170px; font-size: 22px; color: var(--text-color); }
-        label { display: block; margin-top: 15px; font-weight: 600; color: var(--label-color); }
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+        }
+        label { font-weight: 600; color: var(--label-color); }
+        select {
+            background: var(--input-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
         textarea { 
             width: 100%; 
             height: 90px; 
@@ -139,7 +153,6 @@
             line-height: 1.5;
             color: var(--text-color);
         }
-        /* Стили для мини-консоли */
         #debug-console {
             display: none;
             margin-top: 20px;
@@ -170,8 +183,15 @@
     
     <h2 id="uiTitle">Family Recipe Generator</h2>
     
-    <label for="ingredients" id="uiLabel">Your ingredients:</label>
-    <textarea id="ingredients" placeholder="e.g. chicken breast, broccoli, rice, garlic"></textarea>
+    <div class="control-row">
+        <label for="ingredients" id="uiLabel">All kitchen ingredients:</label>
+        <select id="recipeCount">
+            <option value="1">1 dish</option>
+            <option value="5">5 dishes</option>
+            <option value="10">10 dishes</option>
+        </select>
+    </div>
+    <textarea id="ingredients" placeholder="e.g. chicken breast, broccoli, rice, garlic, tomatoes, cheese..."></textarea>
 
     <button class="action-btn" id="uiButton" onclick="generateRecipe()">Get Recipe</button>
 
@@ -181,7 +201,6 @@
     </div>
     <div id="result">Your recipe will appear here...</div>
 
-    <!-- Консоль ошибок -->
     <div id="debug-console">
         <div class="log-info">[System] Debug console initialized.</div>
     </div>
@@ -233,41 +252,54 @@
     const translations = {
         en: {
             title: "Family Recipe Generator",
-            label: "Your ingredients:",
-            placeholder: "e.g. chicken breast, broccoli, rice, garlic",
+            label: "All kitchen ingredients:",
+            placeholder: "e.g. chicken breast, broccoli, rice, garlic, tomatoes...",
             button: "Get Recipe",
             resultTitle: "Result:",
             defaultResult: "Your recipe will appear here...",
-            loading: "Preparing recipe... Please wait.",
+            loading: "Preparing recipes... Please wait.",
             emptyAlert: "Please enter ingredients!",
             errorPrefix: "Error: ",
             serverError: "Connection error with server.",
             copy: "Copy",
             copied: "Copied!",
-            langBtn: "ENG"
+            langBtn: "ENG",
+            options: { "1": "1 dish", "5": "5 dishes", "10": "10 dishes" }
         },
         ru: {
             title: "Генератор семейных рецептов",
-            label: "Ваши ингредиенты:",
-            placeholder: "например: куриная грудка, брокколи, рис, чеснок",
-            button: "Получить рецепт",
+            label: "Все продукты с кухни:",
+            placeholder: "например: курица, рис, капуста, помидоры, сыр...",
+            button: "Получить рецепты",
             resultTitle: "Результат:",
-            defaultResult: "Здесь появится ваш рецепт...",
-            loading: "Готовим рецепт... Пожалуйста, подождите.",
+            defaultResult: "Здесь появятся ваши рецепты...",
+            loading: "Готовим рецепты... Пожалуйста, подождите.",
             emptyAlert: "Пожалуйста, введите ингредиенты!",
             errorPrefix: "Ошибка: ",
             serverError: "Ошибка соединения с сервером.",
             copy: "Копировать",
             copied: "Скопировано!",
-            langBtn: "RU"
+            langBtn: "RU",
+            options: { "1": "1 блюдо", "5": "5 блюд", "10": "10 блюд" }
         }
     };
+
+    function updateSelectOptions() {
+        const select = document.getElementById('recipeCount');
+        const opts = translations[currentLang].options;
+        Array.from(select.options).forEach(opt => {
+            if (opts[opt.value]) {
+                opt.text = opts[opt.value];
+            }
+        });
+    }
 
     function toggleLanguage() {
         currentLang = currentLang === 'en' ? 'ru' : 'en';
         const t = translations[currentLang];
         document.getElementById('langToggle').textContent = t.langBtn;
         updateThemeButton();
+        updateSelectOptions();
         
         document.getElementById('uiTitle').textContent = t.title;
         document.getElementById('uiLabel').textContent = t.label;
@@ -282,7 +314,7 @@
 
         const prevLangDefault = currentLang === 'en' ? translations.ru.defaultResult : translations.en.defaultResult;
         const resultDiv = document.getElementById('result');
-        if (resultDiv.textContent === prevLangDefault || resultDiv.textContent === 'Your recipe will appear here...' || resultDiv.textContent === 'Здесь появится ваш рецепт...') {
+        if (resultDiv.textContent === prevLangDefault || resultDiv.textContent.includes('Your recipe') || resultDiv.textContent.includes('Здесь появятся')) {
             resultDiv.textContent = t.defaultResult;
         }
     }
@@ -309,6 +341,7 @@
 
     async function generateRecipe() {
         const ingredients = document.getElementById('ingredients').value.trim();
+        const count = document.getElementById('recipeCount').value;
         const resultDiv = document.getElementById('result');
         const copyBtn = document.getElementById('copyBtn');
         const t = translations[currentLang];
@@ -320,13 +353,13 @@
 
         resultDiv.textContent = t.loading;
         copyBtn.style.display = 'none';
-        logDebug(`Sending request with ingredients: "${ingredients}", lang: ${currentLang}`);
+        logDebug(`Sending request with ingredients: "${ingredients}", count: ${count}, lang: ${currentLang}`);
 
         try {
             const response = await fetch('/api/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ingredients, lang: currentLang })
+                body: JSON.stringify({ ingredients, lang: currentLang, count })
             });
 
             logDebug(`Response status: ${response.status} ${response.statusText}`);
@@ -359,6 +392,8 @@
             logDebug(`Fetch exception: ${error.message}`, true);
         }
     }
+
+    updateSelectOptions();
 </script>
 
 </body>
