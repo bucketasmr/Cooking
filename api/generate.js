@@ -47,12 +47,12 @@ export default async function handler(req, res) {
         const textOutput = response.text || '';
         
         if (!textOutput.trim()) {
-            return res.status(200).json({ error: 'Модель вернула пустой ответ. Попробуйте изменить список ингредиентов.' });
+            return res.status(200).json({ error: isRussian ? 'Модель вернула пустой ответ. Попробуйте изменить список ингредиентов.' : 'Model returned empty response. Try updating ingredients.' });
         }
 
         return res.status(200).json({ recipe: textOutput });
     } catch (error) {
         console.error("Catch error:", error);
-        return res.status(200).json({ error: `Ошибка бэкенда: ${error.message || error.toString()}` });
+        return res.status(200).json({ error: `Backend error: ${error.message || error.toString()}` });
     }
 }
