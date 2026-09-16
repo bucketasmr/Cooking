@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Family Chef Generator</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            max-width: 600px; 
+            margin: 20px auto; 
+            padding: 15px; 
+            background: #f4f7f6; 
+            -webkit-text-size-adjust: 100%;
+        }
+        .card { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08); 
+            position: relative;
+        }
+        .lang-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #e0e0e0;
+            color: #333;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .lang-btn:active { background: #ccc; }
+        h2 { margin-top: 0; padding-right: 60px; font-size: 22px; color: #333; }
+        label { display: block; margin-top: 15px; font-weight: 600; color: #555; }
+        textarea { 
+            width: 100%; 
+            height: 90px; 
+            padding: 12px; 
+            margin: 8px 0; 
+            border: 1px solid #ccc; 
+            border-radius: 8px; 
+            box-sizing: border-box; 
+            font-size: 16px; /* Предотвращает зум на iPhone */
+            font-family: inherit;
+        }
+        button.action-btn { 
+            background: #4CAF50; 
+            color: white; 
+            border: none; 
+            padding: 14px; 
+            width: 100%;
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 16px; 
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        button.action-btn:active { background: #43a047; }
+        #result { 
+            margin-top: 20px; 
+            white-space: pre-wrap; 
+            background: #fafafa; 
+            padding: 15px; 
+            border-radius: 8px; 
+            border: 1px solid #eee; 
+            font-size: 15px;
+            line-height: 1.5;
+            color: #222;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <button class="lang-btn" id="langToggle" onclick="toggleLanguage()">RU</button>
+    
+    <h2 id="uiTitle">Family Recipe Generator</h2>
+    
+    <label for="ingredients" id="uiLabel">Your ingredients:</label>
+    <textarea id="ingredients" placeholder="e.g. chicken breast, broccoli, rice, garlic"></textarea>
+
+    <button class="action-btn" id="uiButton" onclick="generateRecipe()">Get Recipe</button>
+
+    <h3 id="uiResultTitle" style="font-size: 18px; margin-top: 20px;">Result:</h3>
+    <div id="result">Your recipe will appear here...</div>
+</div>
+
+<script>
+    let currentLang = 'en'; // По умолчанию английский
+
+    const translations = {
+        en: {
+            title: "Family Recipe Generator",
+            label: "Your ingredients:",
+            placeholder: "e.g. chicken breast, broccoli, rice, garlic",
+            button: "Get Recipe",
+            resultTitle: "Result:",
+            defaultResult: "Your recipe will appear here...",
+            loading: "Preparing recipe... Please wait.",
+            emptyAlert: "Please enter ingredients!",
+            errorPrefix: "Error: ",
+            serverError: "Connection error with server."
+        },
+        ru: {
+            title: "Генератор семейных рецептов",
+            label: "Ваши ингредиенты:",
+            placeholder: "например: куриная грудка, брокколи, рис, чеснок",
+            button: "Получить рецепт",
+            resultTitle: "Результат:",
+            defaultResult: "Здесь появится ваш рецепт...",
+            loading: "Готовим рецепт... Пожалуйста, подождите.",
+            emptyAlert: "Пожалуйста, введите ингредиенты!",
+            errorPrefix: "Ошибка: ",
+            serverError: "Ошибка соединения с сервером."
+        }
+    };
+
+    function toggleLanguage() {
+        currentLang = currentLang === 'en' ? 'ru' : 'en';
+        document.getElementById('langToggle').textContent = currentLang === 'en' ? 'RU' : 'EN';
+        
+        const t = translations[currentLang];
+        document.getElementById('uiTitle').textContent = t.title;
+        document.getElementById('uiLabel').textContent = t.label;
+        document.getElementById('ingredients').placeholder = t.placeholder;
+        document.getElementById('uiButton').textContent = t.button;
+        document.getElementById('uiResultTitle').textContent = t.resultTitle;
+        
+        const resultDiv = document.getElementById('result');
+        if (resultDiv.textContent === translations[currentLang === 'en' ? 'ru' : 'en'].defaultResult) {
+            resultDiv.textContent = t.defaultResult;
+        }
+    }
+
+    async function generateRecipe() {
+        const ingredients = document.getElementById('ingredients').value.trim();
+        const resultDiv = document.getElementById('result');
+        const t = translations[currentLang];
+
+        if (!ingredients) {
+            alert(t.emptyAlert);
+            return;
+        }
+
+        resultDiv.textContent = t.loading;
+
+        try {
+            const response = await fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ingredients, lang: currentLang }) // Передаем язык на сервер
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                resultDiv.textContent = data.recipe;
+            } else {
+                resultDiv.textContent = t.errorPrefix + (data.error || 'Failed to generate');
+            }
+        } catch (error) {
+            console.error(error);
+            resultDiv.textContent = t.serverError;
+        }
+    }
+</script>
+
+</body>
+</html>
