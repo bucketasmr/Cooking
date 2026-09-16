@@ -25,18 +25,19 @@ export default async function handler(req, res) {
         }
         
         const ingredients = body?.ingredients;
-        const lang = body?.lang || 'ru';
+        const lang = body?.lang || 'en';
+        const count = Number(body?.count) || 1;
 
         if (!ingredients) {
-            return res.status(200).json({ error: 'Пожалуйста, введите ингредиенты!' });
+            return res.status(200).json({ error: lang === 'ru' ? 'Пожалуйста, введите ингредиенты!' : 'Please enter ingredients!' });
         }
 
         const ai = new GoogleGenAI({ apiKey });
-
         const isRussian = lang === 'ru';
+        
         const basePrompt = isRussian ? 
-            `Создай семейный рецепт блюда из этих ингредиентов: ${ingredients}. Формат: Название, Время, Ингредиенты, Шаги, Советы шефа.` : 
-            `Create a family recipe using: ${ingredients}. Format: Title, Time, Ingredients, Steps, Chef's Tips.`;
+            `Составь ${count} РАЗНЫХ семейных блюд из всего, что есть на кухне: ${ingredients}. Комбинируй их по-разному с базовыми продуктами (масло, специи, лук), добиваясь максимального разнообразия стилей (суп, запеканка, вок, салат, горячее и т.д.). Для каждого блюда укажи: Название, Время, Ингредиенты, Шаги, Совет шефа. Разделяй блюда через '---'.` : 
+            `Create ${count} DIFFERENT family recipes using available kitchen items: ${ingredients}. Combine creatively with pantry staples for maximum style variety (soup, bake, stir-fry, salad, bowl, etc.). For each dish provide: Title, Time, Ingredients, Steps, Chef's Tip. Separate dishes with '---'.`;
 
         const response = await ai.models.generateContent({
             model: 'gemini-3.6-flash',
