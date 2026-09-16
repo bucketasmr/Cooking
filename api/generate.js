@@ -23,7 +23,7 @@ export default async function handler(req, res) {
         if (typeof body === 'string') {
             try { body = JSON.parse(body); } catch (e) {}
         }
-
+        
         const ingredients = body?.ingredients;
         const lang = body?.lang || 'ru';
 
@@ -43,7 +43,11 @@ export default async function handler(req, res) {
             contents: basePrompt,
         });
 
-        const textOutput = response.text || (typeof response.text === 'function' ? response.text() : JSON.stringify(response));
+        const textOutput = response.text || '';
+        
+        if (!textOutput.trim()) {
+            return res.status(200).json({ error: 'Модель вернула пустой ответ. Попробуйте изменить список ингредиентов.' });
+        }
 
         return res.status(200).json({ recipe: textOutput });
     } catch (error) {
