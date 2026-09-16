@@ -64,8 +64,30 @@
             margin-top: 10px;
         }
         button.action-btn:active { background: #43a047; }
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .result-header h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+        .copy-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .copy-btn:active { background: #1976D2; }
+        .copy-btn.copied { background: #4CAF50; }
         #result { 
-            margin-top: 20px; 
+            margin-top: 10px; 
             white-space: pre-wrap; 
             background: #fafafa; 
             padding: 15px; 
@@ -109,7 +131,10 @@
 
     <button class="action-btn" id="uiButton" onclick="generateRecipe()">Get Recipe</button>
 
-    <h3 id="uiResultTitle" style="font-size: 18px; margin-top: 20px;">Result:</h3>
+    <div class="result-header">
+        <h3 id="uiResultTitle">Result:</h3>
+        <button class="copy-btn" id="copyBtn" onclick="copyRecipe()" style="display:none;">Copy</button>
+    </div>
     <div id="result">Your recipe will appear here...</div>
 
     <!-- Консоль ошибок -->
@@ -152,7 +177,9 @@
             loading: "Preparing recipe... Please wait.",
             emptyAlert: "Please enter ingredients!",
             errorPrefix: "Error: ",
-            serverError: "Connection error with server."
+            serverError: "Connection error with server.",
+            copy: "Copy",
+            copied: "Copied!"
         },
         ru: {
             title: "Генератор семейных рецептов",
@@ -164,7 +191,9 @@
             loading: "Готовим рецепт... Пожалуйста, подождите.",
             emptyAlert: "Пожалуйста, введите ингредиенты!",
             errorPrefix: "Ошибка: ",
-            serverError: "Ошибка соединения с сервером."
+            serverError: "Ошибка соединения с сервером.",
+            copy: "Копировать",
+            copied: "Скопировано!"
         }
     };
 
@@ -179,15 +208,42 @@
         document.getElementById('uiButton').textContent = t.button;
         document.getElementById('uiResultTitle').textContent = t.resultTitle;
         
+        const copyBtn = document.getElementById('copyBtn');
+        if (copyBtn.style.display !== 'none' && !copyBtn.classList.contains('copied')) {
+            copyBtn.textContent = t.copy;
+        }
+
         const resultDiv = document.getElementById('result');
         if (resultDiv.textContent === translations[currentLang === 'en' ? 'ru' : 'en'].defaultResult) {
             resultDiv.textContent = t.defaultResult;
         }
     }
 
+    function copyRecipe() {
+        const resultDiv = document.getElementById('result');
+        const textToCopy = resultDiv.textContent;
+        const t = translations[currentLang];
+
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            const copyBtn = document.getElementById('copyBtn');
+            const originalText = copyBtn.textContent;
+            copyBtn.textContent = t.copied;
+            copyBtn.classList.add('copied');
+            logDebug('Recipe copied to clipboard.');
+
+            setTimeout(() => {
+                copyBtn.textContent = t.copy;
+                copyBtn.classList.remove('copied');
+            }, 2000);
+        }).catch(err => {
+            logDebug('Failed to copy: ' + err, true);
+        });
+    }
+
     async function generateRecipe() {
         const ingredients = document.getElementById('ingredients').value.trim();
         const resultDiv = document.getElementById('result');
+        const copyBtn = document.getElementById('copyBtn');
         const t = translations[currentLang];
 
         if (!ingredients) {
@@ -196,6 +252,7 @@
         }
 
         resultDiv.textContent = t.loading;
+        copyBtn.style.display = 'none';
         logDebug(`Sending request with ingredients: "${ingredients}", lang: ${currentLang}`);
 
         try {
@@ -217,16 +274,21 @@
             }
 
             if (response.ok) {
-                resultDiv.textContent = data.recipe || JSON.stringify(data, null, 2);
+                const textContent = data.recipe || JSON.stringify(data, null, 2);
+                resultDiv.textContent = textContent;
+                copyBtn.style.display = 'block';
+                copyBtn.textContent = t.copy;
                 logDebug('Recipe generated successfully.');
             } else {
                 const errMsg = data.error || 'Failed to generate';
                 resultDiv.textContent = t.errorPrefix + errMsg;
+                copyBtn.style.display = 'none';
                 logDebug(`Server API error: ${errMsg}`, true);
             }
         } catch (error) {
             console.error(error);
             resultDiv.textContent = t.serverError;
+            copyBtn.style.display = 'none';
             logDebug(`Fetch exception: ${error.message}`, true);
         }
     }
